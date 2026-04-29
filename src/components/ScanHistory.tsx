@@ -3,7 +3,12 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { history, type ScanRecord } from "@/lib/scanHistory";
-import { History, Repeat2, Trash2, Link2, Mail, Phone, Image as ImageIcon } from "lucide-react";
+import { verdicts, verdictMeta as userVerdictMeta, type UserVerdict } from "@/lib/verdicts";
+import { toast } from "sonner";
+import {
+  History, Repeat2, Trash2, Link2, Mail, Phone, Image as ImageIcon,
+  Flag, ShieldCheck, EyeOff, Undo2,
+} from "lucide-react";
 
 const verdictColor: Record<ScanRecord["result"]["verdict"], string> = {
   safe: "bg-success/15 text-success border-success/30",
@@ -32,10 +37,20 @@ type Props = { onRerun?: (record: ScanRecord) => void };
 
 const ScanHistory = ({ onRerun }: Props) => {
   const [items, setItems] = useState<ScanRecord[]>([]);
+  const [userMarks, setUserMarks] = useState<Record<string, UserVerdict | null>>({});
 
   useEffect(() => {
-    setItems(history.list());
-    return history.subscribe(() => setItems(history.list()));
+    const refresh = () => {
+      const list = history.list();
+      setItems(list);
+      const marks: Record<string, UserVerdict | null> = {};
+      list.forEach((r) => { marks[r.id] = verdicts.get(r.id); });
+      setUserMarks(marks);
+    };
+    refresh();
+    const off1 = history.subscribe(refresh);
+    const off2 = verdicts.subscribe(refresh);
+    return () => { off1(); off2(); };
   }, []);
 
   if (items.length === 0) {
@@ -72,11 +87,13 @@ const ScanHistory = ({ onRerun }: Props) => {
       <div className="grid gap-2">
         {items.map((it) => {
           const Icon = typeIcon[it.type];
+          const mark = userMarks[it.id] ?? null;
           return (
             <div
               key={it.id}
-              className="flex items-center gap-3 rounded-lg border border-border/60 bg-background/40 p-3 hover:border-primary/40 transition-colors"
+              className="rounded-lg border border-border/60 bg-background/40 p-3 hover:border-primary/40 transition-colors"
             >
+              <div className="flex items-center gap-3">
               <div className="h-9 w-9 rounded-md bg-primary/10 grid place-items-center shrink-0">
                 <Icon className="h-4 w-4 text-primary" />
               </div>
@@ -85,6 +102,11 @@ const ScanHistory = ({ onRerun }: Props) => {
                   <Badge className={`${verdictColor[it.result.verdict]} border uppercase text-[10px] tracking-wider`}>
                     {it.result.verdict}
                   </Badge>
+                  {mark && (
+                    <Badge className={`${userVerdictMeta[mark].classes} border uppercase text-[10px] tracking-wider`}>
+                      {userVerdictMeta[mark].label}
+                    </Badge>
+                  )}
                   <span className="text-xs text-muted-foreground uppercase tracking-wider">{it.type}</span>
                   <span className="text-xs text-muted-foreground">· {formatTime(it.timestamp)}</span>
                 </div>
@@ -106,6 +128,42 @@ const ScanHistory = ({ onRerun }: Props) => {
               <Button size="icon" variant="ghost" className="shrink-0" onClick={() => history.remove(it.id)}>
                 <Trash2 className="h-4 w-4" />
               </Button>
+              </div>
+              <div className="mt-3 pt-3 border-t border-border/40 flex flex-wrap items-center gap-2">
+                <span className="text-[10px] uppercase tracking-widest text-muted-foreground mr-1">Your call:</span>
+                <Button
+                  size="sm"
+                  variant={mark === "scam" ? "default" : "outline"}
+                  className={mark === "scam" ? "bg-destructive text-destructive-foreground hover:bg-destructive/90" : ""}
+                  onClick={() => { verdicts.set(it.id, "scam"); toast.success("Reported as scam"); }}
+                >
+                  <Flag className="h-3.5 w-3.5 mr-1" /> Report scam
+                </Button>
+                <Button
+                  size="sm"
+                  variant={mark === "trusted" ? "default" : "outline"}
+                  className={mark === "trusted" ? "bg-success text-success-foreground hover:bg-success/90" : ""}
+                  onClick={() => { verdicts.set(it.id, "trusted"); toast.success("Marked as trusted"); }}
+                >
+                  <ShieldCheck className="h-3.5 w-3.5 mr-1" /> Trust sender
+                </Button>
+                <Button
+                  size="sm"
+                  variant={mark === "ignored" ? "secondary" : "outline"}
+                  onClick={() => { verdicts.set(it.id, "ignored"); toast("Ignored"); }}
+                >
+                  <EyeOff className="h-3.5 w-3.5 mr-1" /> Ignore
+                </Button>
+                {mark && (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => { verdicts.clear(it.id); toast("Cleared your mark"); }}
+                  >
+                    <Undo2 className="h-3.5 w-3.5 mr-1" /> Clear
+                  </Button>
+                )}
+              </div>
             </div>
           );
         })}
