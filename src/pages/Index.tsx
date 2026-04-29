@@ -1,6 +1,9 @@
 import { useRef } from "react";
 import { Link } from "react-router-dom";
-import { Shield, Radar as RadarIcon, Brain, Zap, Lock, Globe, ArrowRight, BarChart3 } from "lucide-react";
+import {
+  Shield, Radar as RadarIcon, Brain, Zap, Globe, ArrowRight, BarChart3,
+  Flag, Ban, EyeOff, Chrome, Linkedin, Mail, Phone, MapPin, User,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import ThreatScanner, { type ThreatScannerHandle } from "@/components/ThreatScanner";
 import ScanHistory from "@/components/ScanHistory";
@@ -10,9 +13,12 @@ const features = [
   { icon: Brain, title: "AI-Powered Detection", desc: "Gemini-class language models inspect URLs and message text for phishing patterns and zero-day scams." },
   { icon: Zap, title: "Instant Risk Score", desc: "Get a 0–100 risk score, verdict, and itemized indicators in seconds — no signup required." },
   { icon: RadarIcon, title: "Adaptive Signals", desc: "Looks beyond blacklists: lookalike domains, urgency cues, credential traps, and brand impersonation." },
-  { icon: Lock, title: "Privacy-First", desc: "Inputs are analyzed in-flight and never sold or shared. Use freely for personal or team safety checks." },
   { icon: Globe, title: "Universal Coverage", desc: "Works with any URL, email body, or text message — across providers, platforms, and languages." },
   { icon: Shield, title: "Clear Guidance", desc: "Every scan includes a plain-English recommendation: open, verify, or avoid." },
+  { icon: Flag, title: "Report Suspicious", desc: "Flag any scan as a confirmed scam to enrich your local threat feed and warn future scans." },
+  { icon: Ban, title: "Block Sender", desc: "Block malicious domains, emails, and phone numbers so they're auto-flagged the moment they appear again." },
+  { icon: EyeOff, title: "Ignore False Positives", desc: "Mark a scan as safe to silence repeat alerts on trusted senders without losing the audit trail." },
+  { icon: Chrome, title: "Browser Extension Mode", desc: "One-click radar in your browser toolbar — scan the current tab, hovered link, or selected text in real time." },
 ];
 
 const Index = () => {
@@ -71,7 +77,7 @@ const Index = () => {
               {[
                 { v: "99%", l: "Pattern coverage" },
                 { v: "<3s", l: "Avg scan time" },
-                { v: "0", l: "Setup required" },
+                { v: "10+", l: "Threat signals" },
               ].map((s) => (
                 <div key={s.l}>
                   <div className="text-2xl font-bold text-gradient-primary">{s.v}</div>
