@@ -1,6 +1,9 @@
-import { Shield, Radar as RadarIcon, Brain, Zap, Lock, Globe, ArrowRight } from "lucide-react";
+import { useRef } from "react";
+import { Link } from "react-router-dom";
+import { Shield, Radar as RadarIcon, Brain, Zap, Lock, Globe, ArrowRight, BarChart3 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import ThreatScanner from "@/components/ThreatScanner";
+import ThreatScanner, { type ThreatScannerHandle } from "@/components/ThreatScanner";
+import ScanHistory from "@/components/ScanHistory";
 import heroImg from "@/assets/radar-hero.jpg";
 
 const features = [
@@ -13,6 +16,7 @@ const features = [
 ];
 
 const Index = () => {
+  const scannerRef = useRef<ThreatScannerHandle>(null);
   return (
     <div className="min-h-screen bg-background text-foreground">
       {/* Nav */}
@@ -26,8 +30,12 @@ const Index = () => {
           </a>
           <nav className="hidden md:flex items-center gap-7 text-sm text-muted-foreground">
             <a href="#scanner" className="hover:text-foreground transition-colors">Scanner</a>
+            <a href="#history" className="hover:text-foreground transition-colors">History</a>
             <a href="#features" className="hover:text-foreground transition-colors">Features</a>
             <a href="#how" className="hover:text-foreground transition-colors">How it works</a>
+            <Link to="/admin" className="hover:text-foreground transition-colors inline-flex items-center gap-1">
+              <BarChart3 className="h-3.5 w-3.5" /> Admin
+            </Link>
           </nav>
           <Button asChild size="sm" className="bg-gradient-primary text-primary-foreground hover:opacity-90">
             <a href="#scanner">Scan now</a>
@@ -89,12 +97,24 @@ const Index = () => {
       <section className="container py-16 md:py-24">
         <div className="max-w-2xl mx-auto text-center mb-10">
           <div className="text-xs uppercase tracking-widest text-primary mb-3">Live Scanner</div>
-          <h2 className="text-3xl md:text-4xl font-bold tracking-tight">Scan a URL or message</h2>
+          <h2 className="text-3xl md:text-4xl font-bold tracking-tight">Scan a URL, message, phone, or image</h2>
           <p className="text-muted-foreground mt-3">
-            Paste anything suspicious. Our AI returns a verdict, a 0–100 risk score, and the exact signals it found.
+            Paste anything suspicious — links, messages, phone numbers, or upload an image. Our AI returns a verdict, a 0–100 risk score, and the exact signals it found.
           </p>
         </div>
-        <ThreatScanner />
+        <ThreatScanner ref={scannerRef} />
+      </section>
+
+      {/* History */}
+      <section id="history" className="container pb-16 md:pb-24">
+        <div className="max-w-2xl mx-auto text-center mb-10">
+          <div className="text-xs uppercase tracking-widest text-primary mb-3">Recent activity</div>
+          <h2 className="text-3xl md:text-4xl font-bold tracking-tight">Your scan history</h2>
+          <p className="text-muted-foreground mt-3">
+            Stored locally in your browser. Re-run any past scan with one click.
+          </p>
+        </div>
+        <ScanHistory onRerun={(rec) => scannerRef.current?.loadInput(rec.type, rec.input)} />
       </section>
 
       {/* Features */}

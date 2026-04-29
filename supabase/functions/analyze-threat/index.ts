@@ -6,31 +6,60 @@ const corsHeaders = {
 };
 
 const SYSTEM_PROMPT = `You are Scam Shield Radar, an expert phishing & scam detection AI.
-You analyze URLs, emails, and message content to detect phishing, social engineering, scams, and malicious intent.
+You analyze URLs, emails, phone numbers, and images to detect phishing, social engineering, scams, fake accounts, fraudulent media, and malicious intent.
 
-Analysis criteria:
-- URLs: domain reputation, look-alike/typosquatting, suspicious TLDs, IP-based hosts, excessive subdomains, URL length, presence of credential keywords, HTTPS usage, URL shorteners, recently registered indicators.
-- Emails/messages: urgency tactics, generic greetings, sender/domain mismatch, suspicious links, payment/credential requests, grammar anomalies, brand impersonation.
+Analysis criteria by type:
+- URL: domain reputation, look-alike/typosquatting, suspicious TLDs, IP-based hosts, excessive subdomains, URL length, credential keywords, HTTPS usage, URL shorteners, recently registered indicators.
+- EMAIL/MESSAGE: urgency tactics, generic greetings, sender/domain mismatch, suspicious links, payment/credential requests, grammar anomalies, brand impersonation, fake-account signals (new handles, mismatched display name).
+- PHONE: country/region risk, premium-rate prefixes, known scam patterns (IRS/HMRC/tax, tech support, package delivery), VoIP/spoofable ranges, repeated/sequential digits, formatting anomalies.
+- IMAGE: signs of morphing / face-swap / deepfake (asymmetry around eyes, ears, hairline; lighting mismatch; warped backgrounds; inconsistent shadows; blurred boundaries), screenshot scams (fake bank UI, crypto giveaways), forged documents, suspicious QR codes, brand impersonation, phishing landing-page screenshots, fake social-media profile cues.
 
-Always be decisive and educational. Score conservatively but firmly: legitimate-looking content gets low scores, clear phishing gets 80+.`;
+ALWAYS populate \`category_scores\` with 0-100 numbers for these keys when relevant:
+domain, content, urgency, credentials, impersonation, media_integrity, reputation.
+Use 0 when a category does not apply (e.g. media_integrity for a URL).
+
+Be decisive and educational. Score conservatively but firmly: legitimate-looking content gets low scores, clear phishing/scam/fake media gets 80+.`;
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { input, type } = await req.json();
-    if (!input || typeof input !== "string") {
-      return new Response(JSON.stringify({ error: "Missing input" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+    const { input, type, image } = await req.json();
+    const validTypes = ["url", "email", "phone", "image"];
+    if (!validTypes.includes(type)) {
+      return new Response(JSON.stringify({ error: "Invalid scan type" }), {
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
+    }
+    if (type === "image") {
+      if (!image || typeof image !== "string" || !image.startsWith("data:image/")) {
+        return new Response(JSON.stringify({ error: "Missing or invalid image data" }), {
+          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    } else {
+      if (!input || typeof input !== "string") {
+        return new Response(JSON.stringify({ error: "Missing input" }), {
+          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
     }
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
-    const userPrompt = type === "url"
-      ? `Analyze this URL for phishing or scam risk:\n\n${input.slice(0, 2000)}`
-      : `Analyze this email/message content for phishing or scam risk:\n\n${input.slice(0, 8000)}`;
+    const promptByType: Record<string, string> = {
+      url: `Analyze this URL for phishing or scam risk:\n\n${(input ?? "").slice(0, 2000)}`,
+      email: `Analyze this email/message for phishing, scam, or fake-account risk:\n\n${(input ?? "").slice(0, 8000)}`,
+      phone: `Analyze this phone number for scam / fraud / robocall risk. Consider region, prefix patterns, premium-rate indicators, and known scam playbooks:\n\n${(input ?? "").slice(0, 64)}`,
+      image: `Analyze the attached image for signs of phishing, scam, deepfake / morphing, forged document, fake social profile, or brand impersonation. Be specific about visual indicators you observe.`,
+    };
+    const userText = promptByType[type];
+    const userContent: any = type === "image"
+      ? [
+          { type: "text", text: userText },
+          { type: "image_url", image_url: { url: image } },
+        ]
+      : userText;
 
     const tools = [
       {
@@ -53,12 +82,27 @@ Deno.serve(async (req) => {
                     label: { type: "string" },
                     severity: { type: "string", enum: ["info", "low", "medium", "high"] },
                     detail: { type: "string" },
+                    category: { type: "string", description: "One of: domain, content, urgency, credentials, impersonation, media_integrity, reputation" },
                   },
                   required: ["label", "severity", "detail"],
                   additionalProperties: false,
                 },
               },
               recommendation: { type: "string", description: "What the user should do next." },
+              category_scores: {
+                type: "object",
+                description: "Risk breakdown per category, 0-100.",
+                properties: {
+                  domain: { type: "number" },
+                  content: { type: "number" },
+                  urgency: { type: "number" },
+                  credentials: { type: "number" },
+                  impersonation: { type: "number" },
+                  media_integrity: { type: "number" },
+                  reputation: { type: "number" },
+                },
+                additionalProperties: false,
+              },
             },
             required: ["risk_score", "verdict", "summary", "indicators", "recommendation"],
             additionalProperties: false,
@@ -77,7 +121,7 @@ Deno.serve(async (req) => {
         model: "google/gemini-2.5-flash",
         messages: [
           { role: "system", content: SYSTEM_PROMPT },
-          { role: "user", content: userPrompt },
+          { role: "user", content: userContent },
         ],
         tools,
         tool_choice: { type: "function", function: { name: "report_threat" } },
