@@ -17,7 +17,7 @@ import { presets, validate } from "@/lib/validators";
 type Result = ScanResult;
 
 const verdictMeta = {
-  safe: { label: "Looks Safe", icon: ShieldCheck, gradient: "bg-gradient-safe", color: "text-success" },
+  safe: { label: "SAFE — no fraud indicators", icon: ShieldCheck, gradient: "bg-muted/40 border border-success/30", color: "text-success" },
   suspicious: { label: "Suspicious", icon: ShieldAlert, gradient: "bg-gradient-warning", color: "text-warning" },
   phishing: { label: "Phishing Detected", icon: ShieldX, gradient: "bg-gradient-danger", color: "text-destructive" },
 };
@@ -276,12 +276,15 @@ const ThreatScanner = forwardRef<ThreatScannerHandle>((_props, ref) => {
         )}
 
         {!loading && result && Verdict && (
-          <div className="space-y-6 animate-fade-in-up">
-            <div className={`rounded-xl ${Verdict.gradient} p-4 flex items-center gap-3 text-foreground`}>
+          <div className={`space-y-6 animate-fade-in-up ${result.verdict === "safe" ? "opacity-95" : ""}`}>
+            <div className={`rounded-xl ${Verdict.gradient} p-4 flex items-center gap-3 ${result.verdict === "safe" ? Verdict.color : "text-foreground"}`}>
               <Verdict.icon className="h-7 w-7" />
               <div>
                 <div className="text-xs uppercase tracking-widest opacity-80">Verdict</div>
-                <div className="font-bold text-lg">{Verdict.label}</div>
+                <div className="font-bold text-lg leading-tight">{Verdict.label}</div>
+                {result.verdict === "safe" && (
+                  <div className="text-xs text-muted-foreground mt-0.5">No phishing or scam signals detected</div>
+                )}
               </div>
             </div>
             <RiskGauge score={result.risk_score} verdict={result.verdict} />
