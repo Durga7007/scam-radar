@@ -45,25 +45,29 @@ export function normalizePhone(raw: string): string {
   return (hasPlus ? "+" : "") + v;
 }
 
-export function validate(type: ScanType, input: string): { ok: true; value: string } | { ok: false; error: string } {
+export type ValidateOk = { ok: true; value: string };
+export type ValidateErr = { ok: false; error: string };
+export type ValidateResult = ValidateOk | ValidateErr;
+
+export function validate(type: ScanType, input: string): ValidateResult {
   if (type === "url") {
     const r = urlSchema.safeParse(input);
-    if (!r.success) return { ok: false, error: r.error.issues[0].message };
-    return { ok: true, value: normalizeUrl(r.data) };
+    if (!r.success) return { ok: false, error: r.error.issues[0].message } as ValidateErr;
+    return { ok: true, value: normalizeUrl(r.data) } as ValidateOk;
   }
   if (type === "email") {
     const r = emailContentSchema.safeParse(input);
-    if (!r.success) return { ok: false, error: r.error.issues[0].message };
-    return { ok: true, value: r.data };
+    if (!r.success) return { ok: false, error: r.error.issues[0].message } as ValidateErr;
+    return { ok: true, value: r.data } as ValidateOk;
   }
   if (type === "phone") {
     const r = phoneSchema.safeParse(input);
-    if (!r.success) return { ok: false, error: r.error.issues[0].message };
+    if (!r.success) return { ok: false, error: r.error.issues[0].message } as ValidateErr;
     const normalized = normalizePhone(r.data);
-    if (normalized.replace(/\D/g, "").length < 5) return { ok: false, error: "Not enough digits in phone number" };
-    return { ok: true, value: normalized };
+    if (normalized.replace(/\D/g, "").length < 5) return { ok: false, error: "Not enough digits in phone number" } as ValidateErr;
+    return { ok: true, value: normalized } as ValidateOk;
   }
-  return { ok: true, value: input };
+  return { ok: true, value: input } as ValidateOk;
 }
 
 export type Preset = { label: string; value: string; hint: string };
