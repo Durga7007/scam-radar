@@ -98,7 +98,7 @@ const ThreatScanner = forwardRef<ThreatScannerHandle>((_props, ref) => {
     } else {
       const raw = tab === "url" ? url : tab === "email" ? email : phone;
       const v = validate(tab, raw);
-      if (!v.ok) {
+      if (v.ok === false) {
         toast.error(v.error);
         return;
       }
