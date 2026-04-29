@@ -2,7 +2,7 @@ import { useRef } from "react";
 import { Link } from "react-router-dom";
 import {
   Shield, Radar as RadarIcon, Brain, Zap, Globe, ArrowRight, BarChart3,
-  Flag, Ban, EyeOff, Chrome, Linkedin, Mail, Phone, MapPin, User,
+  EyeOff, Linkedin, Mail, Phone, MapPin, User,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import ThreatScanner, { type ThreatScannerHandle } from "@/components/ThreatScanner";
@@ -15,10 +15,7 @@ const features = [
   { icon: RadarIcon, title: "Adaptive Signals", desc: "Looks beyond blacklists: lookalike domains, urgency cues, credential traps, and brand impersonation." },
   { icon: Globe, title: "Universal Coverage", desc: "Works with any URL, email body, or text message — across providers, platforms, and languages." },
   { icon: Shield, title: "Clear Guidance", desc: "Every scan includes a plain-English recommendation: open, verify, or avoid." },
-  { icon: Flag, title: "Report Suspicious", desc: "Flag any scan as a confirmed scam to enrich your local threat feed and warn future scans." },
-  { icon: Ban, title: "Block Sender", desc: "Block malicious domains, emails, and phone numbers so they're auto-flagged the moment they appear again." },
   { icon: EyeOff, title: "Ignore False Positives", desc: "Mark a scan as safe to silence repeat alerts on trusted senders without losing the audit trail." },
-  { icon: Chrome, title: "Browser Extension Mode", desc: "One-click radar in your browser toolbar — scan the current tab, hovered link, or selected text in real time." },
 ];
 
 const Index = () => {
@@ -44,9 +41,6 @@ const Index = () => {
               <BarChart3 className="h-3.5 w-3.5" /> Admin
             </Link>
           </nav>
-          <Button asChild size="sm" className="bg-gradient-primary text-primary-foreground hover:opacity-90">
-            <a href="#scanner">Scan now</a>
-          </Button>
         </div>
       </header>
 
@@ -213,8 +207,8 @@ const Index = () => {
               <div className="text-xs uppercase tracking-widest text-primary mb-2">Creator</div>
               <h3 className="text-2xl md:text-3xl font-bold tracking-tight uppercase">DURGASREE AVVARU</h3>
               <p className="text-muted-foreground mt-3 leading-relaxed">
-                Builder of Scam Shield Radar — passionate about cybersecurity, AI, and crafting tools
-                that make the internet safer for everyone.
+                Builder of Scam Shield Radar — an AI + full-stack web developer focused on shipping
+                practical, AI-powered tools that solve real problems for real users.
               </p>
               <div className="grid sm:grid-cols-3 gap-3 mt-6">
                 <a
