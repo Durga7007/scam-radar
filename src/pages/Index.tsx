@@ -182,6 +182,72 @@ const Index = () => {
         </div>
       </section>
 
+      {/* About the Project */}
+      <section id="about" className="container py-16 md:py-24 border-t border-border/60">
+        <div className="max-w-3xl mx-auto text-center">
+          <div className="text-xs uppercase tracking-widest text-primary mb-3">About the project</div>
+          <h2 className="text-2xl md:text-3xl font-bold tracking-tight">Scam Shield Radar</h2>
+          <p className="text-muted-foreground mt-4 leading-relaxed">
+            Scam Shield Radar is an AI-powered phishing detection and alert system designed to protect
+            everyday internet users, banking customers, and organizations from social-engineering attacks.
+            It analyzes URLs, emails, phone numbers, and uploaded images in real time using advanced
+            language and vision models, returning a 0–100 risk score, an itemized list of threat indicators,
+            a clear verdict (safe, suspicious, or phishing), and a plain-English recommendation. Users can
+            re-run past scans from a local history, drill into a category-wise risk breakdown, and visit an
+            admin dashboard for aggregated analytics — all without an account. The project demonstrates a
+            full-stack security workflow combining React, Tailwind, and AI inference into a single, fast,
+            and privacy-respecting defense layer against modern scams.
+          </p>
+        </div>
+      </section>
+
+      {/* Creator */}
+      <section id="creator" className="container pb-16 md:pb-24">
+        <div className="max-w-4xl mx-auto rounded-3xl border border-border/60 bg-gradient-card p-8 md:p-12">
+          <div className="grid md:grid-cols-[auto_1fr] gap-8 items-center">
+            <div className="h-28 w-28 rounded-2xl bg-gradient-primary grid place-items-center shadow-glow mx-auto md:mx-0">
+              <User className="h-12 w-12 text-primary-foreground" />
+            </div>
+            <div className="text-center md:text-left">
+              <div className="text-xs uppercase tracking-widest text-primary mb-2">Creator</div>
+              <h3 className="text-2xl md:text-3xl font-bold tracking-tight uppercase">DURGASREE AVVARU</h3>
+              <p className="text-muted-foreground mt-3 leading-relaxed">
+                Builder of Scam Shield Radar — passionate about cybersecurity, AI, and crafting tools
+                that make the internet safer for everyone.
+              </p>
+              <div className="grid sm:grid-cols-3 gap-3 mt-6">
+                <a
+                  href="https://www.linkedin.com/in/durgasree-avvaru"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 rounded-lg border border-border/60 bg-background/40 px-4 py-3 hover:border-primary/40 transition-colors"
+                >
+                  <Linkedin className="h-4 w-4 text-primary shrink-0" />
+                  <span className="text-sm truncate">LinkedIn</span>
+                </a>
+                <a
+                  href="tel:+919059266595"
+                  className="flex items-center gap-2 rounded-lg border border-border/60 bg-background/40 px-4 py-3 hover:border-primary/40 transition-colors"
+                >
+                  <Phone className="h-4 w-4 text-primary shrink-0" />
+                  <span className="text-sm font-mono truncate">+91 90592 66595</span>
+                </a>
+                <a
+                  href="mailto:durgasree.avvaru@gmail.com"
+                  className="flex items-center gap-2 rounded-lg border border-border/60 bg-background/40 px-4 py-3 hover:border-primary/40 transition-colors"
+                >
+                  <Mail className="h-4 w-4 text-primary shrink-0" />
+                  <span className="text-sm truncate">Email</span>
+                </a>
+              </div>
+              <div className="flex items-center justify-center md:justify-start gap-2 text-xs text-muted-foreground mt-5">
+                <MapPin className="h-3.5 w-3.5" /> India
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <footer className="border-t border-border/60">
         <div className="container py-8 flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-muted-foreground">
           <div className="flex items-center gap-2">
