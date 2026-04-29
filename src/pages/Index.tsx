@@ -39,6 +39,7 @@ const Index = () => {
             <a href="#history" className="hover:text-foreground transition-colors">History</a>
             <a href="#features" className="hover:text-foreground transition-colors">Features</a>
             <a href="#how" className="hover:text-foreground transition-colors">How it works</a>
+            <a href="#creator" className="hover:text-foreground transition-colors">Creator</a>
             <Link to="/admin" className="hover:text-foreground transition-colors inline-flex items-center gap-1">
               <BarChart3 className="h-3.5 w-3.5" /> Admin
             </Link>
