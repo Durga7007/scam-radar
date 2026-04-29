@@ -127,9 +127,9 @@ const Index = () => {
       <section id="features" className="container py-16 md:py-24 border-t border-border/60">
         <div className="max-w-2xl mx-auto text-center mb-12">
           <div className="text-xs uppercase tracking-widest text-primary mb-3">Capabilities</div>
-          <h2 className="text-3xl md:text-4xl font-bold tracking-tight">Built for the modern threat landscape</h2>
-          <p className="text-muted-foreground mt-3">
-            Phishing evolves daily. Scam Shield Radar combines language understanding with classic signals to keep up.
+          <h2 className="text-2xl md:text-3xl font-bold tracking-tight">Everything you need to stay safe</h2>
+          <p className="text-muted-foreground mt-3 text-sm md:text-base">
+            A complete toolkit — detect, decide, and defend against phishing in one place.
           </p>
         </div>
         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
