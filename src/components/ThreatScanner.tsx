@@ -6,7 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Loader2, Link2, Mail, Phone, Image as ImageIcon, ShieldCheck, ShieldAlert, ShieldX, AlertTriangle, Info, Upload, Sparkles, X } from "lucide-react";
+import { Loader2, Link2, Mail, Phone, Image as ImageIcon, ShieldCheck, ShieldAlert, ShieldX, AlertTriangle, Info, Upload, Sparkles, X, BadgeCheck } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import Radar from "./Radar";
 import RiskGauge from "./RiskGauge";
@@ -17,7 +17,7 @@ import { presets, validate } from "@/lib/validators";
 type Result = ScanResult;
 
 const verdictMeta = {
-  safe: { label: "SAFE — no fraud indicators", icon: ShieldCheck, gradient: "bg-muted/40 border border-success/30", color: "text-success" },
+  safe: { label: "SAFE — no fraud indicators", icon: ShieldCheck, gradient: "bg-success/10 border border-success/40", color: "text-success" },
   suspicious: { label: "Suspicious", icon: ShieldAlert, gradient: "bg-gradient-warning", color: "text-warning" },
   phishing: { label: "Phishing Detected", icon: ShieldX, gradient: "bg-gradient-danger", color: "text-destructive" },
 };
@@ -277,16 +277,32 @@ const ThreatScanner = forwardRef<ThreatScannerHandle>((_props, ref) => {
 
         {!loading && result && Verdict && (
           <div className={`space-y-6 animate-fade-in-up ${result.verdict === "safe" ? "opacity-95" : ""}`}>
-            <div className={`rounded-xl ${Verdict.gradient} p-4 flex items-center gap-3 ${result.verdict === "safe" ? Verdict.color : "text-foreground"}`}>
-              <Verdict.icon className="h-7 w-7" />
-              <div>
-                <div className="text-xs uppercase tracking-widest opacity-80">Verdict</div>
-                <div className="font-bold text-lg leading-tight">{Verdict.label}</div>
-                {result.verdict === "safe" && (
-                  <div className="text-xs text-muted-foreground mt-0.5">No phishing or scam signals detected</div>
-                )}
+            {result.verdict === "safe" ? (
+              <div className="rounded-xl bg-success/10 border border-success/40 p-4 flex items-center gap-3">
+                <div className="h-10 w-10 rounded-full bg-success/15 grid place-items-center text-success ring-1 ring-success/30">
+                  <BadgeCheck className="h-6 w-6" />
+                </div>
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-semibold uppercase tracking-widest text-success">Verified Safe</span>
+                    <span className="text-[10px] uppercase tracking-widest px-1.5 py-0.5 rounded-full bg-success/15 text-success border border-success/30">
+                      No fraud indicators
+                    </span>
+                  </div>
+                  <div className="font-semibold text-base leading-tight mt-0.5 text-foreground">
+                    Looks legitimate — safe to proceed
+                  </div>
+                </div>
               </div>
-            </div>
+            ) : (
+              <div className={`rounded-xl ${Verdict.gradient} p-4 flex items-center gap-3 text-foreground`}>
+                <Verdict.icon className="h-7 w-7" />
+                <div>
+                  <div className="text-xs uppercase tracking-widest opacity-80">Verdict</div>
+                  <div className="font-bold text-lg leading-tight">{Verdict.label}</div>
+                </div>
+              </div>
+            )}
             <RiskGauge score={result.risk_score} verdict={result.verdict} />
             <p className="text-sm leading-relaxed">{result.summary}</p>
             <RiskBreakdown scores={result.category_scores} />
