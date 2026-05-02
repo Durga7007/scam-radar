@@ -29,20 +29,31 @@ EMAIL / MESSAGE rules:
   prize/lottery, KYC threats, refund scams, job-offer scams.
 
 PHONE rules — IMPORTANT, READ CAREFULLY:
-Phone numbers cannot be verified as legitimate from the number alone. There is NO whitelist for phone numbers.
-- DEFAULT verdict for any unsolicited / unknown phone number is "suspicious" (risk_score 35-55), NOT safe.
-- Mark "phishing" (risk_score 70-95) when ANY of these apply:
-  * Premium-rate prefix (UK 09, +1-900, +234 advance-fee region patterns, +22x/+23x West-Africa scam patterns,
-    Indian premium codes, fake "1-800" variants used in tech-support scams).
-  * Number matches known IRS/SSA/customs/courier/bank-impersonation scam playbooks.
-  * Repeated 0s, sequential digits, or obvious spoof patterns (e.g. +1 202 555 0143 — 555-01xx is a US fictional/test range
-    commonly reused in scam demos and robocalls).
-  * Test/fictional ranges: US 555-0100..555-0199, UK 0113 496 0xxx, Indian 9876543210-style placeholders.
-  * Caller-ID spoofing patterns (number too short, too long, or impossible country code).
-- Mark "safe" (risk_score 0-15) ONLY when the number is clearly an official published helpline of a known organization
-  (e.g. official RBI 14440, official bank toll-free numbers verifiable from their domain). If unsure, do NOT mark safe.
-- For phone, "summary" must explicitly say the number cannot be independently verified and the user should treat unsolicited
-  calls/SMS with caution.
+You MUST distinguish between (a) clearly fraudulent / impossible numbers, (b) ordinary-looking unknown numbers, and
+(c) verifiable official helplines. Do NOT mark every phone number as suspicious — that destroys signal value.
+
+Tier A — "phishing" (risk_score 70-95). Use when ANY of these apply:
+  * Premium-rate / scam-prone prefixes: +1-900, UK 09, West-Africa advance-fee patterns (+234, +22x, +23x with unusual length),
+    fake "1-800" tech-support variants, Indian premium SMS shortcodes used in lottery scams.
+  * Known impersonation playbook numbers (IRS, SSA, customs, courier, RBI/bank impersonation).
+  * Test / fictional ranges that real scammers reuse: US 555-0100..555-0199, UK 0113 496 0xxx, obvious placeholders
+    like 9876543210 / 1234567890 / 0000000000 / 1111111111.
+  * Structurally impossible: too short, too long, invalid country code, all-zero or all-same digits, monotonic sequences.
+  * Caller-ID spoof patterns (e.g. mismatched country/area code combinations that cannot exist).
+
+Tier B — "suspicious" (risk_score 25-55). Use when the number is plausible but unverifiable AND there is at least one
+mild red flag (unusual length for the claimed country, premium-looking prefix that isn't conclusively scam, repeated
+digit cluster, recently-spoofed range). Summary must say it cannot be independently verified.
+
+Tier C — "safe" (risk_score 0-19). Use when EITHER:
+  * The number is a well-known official helpline of a recognised organisation (e.g. India RBI 14440, Indian cyber-crime
+    1930, US emergency 911, UK 999/101/111, bank toll-free numbers verifiable from the bank's official domain), OR
+  * The number is a structurally valid ordinary mobile/landline with NO scam indicators (normal length for its country,
+    no premium prefix, no placeholder pattern, no impersonation context). In this case summary must say
+    "no fraud indicators detected, but caller identity cannot be verified from the number alone — verify the caller
+    if they request money, OTP, or personal data".
+
+Never claim a phone number is "verified legitimate". Safe means "no red flags found".
 
 IMAGE rules:
 - Flag morphing/deepfake artifacts, fake banking/crypto UI screenshots, forged IDs/documents, payment QR codes from unknown sources,
