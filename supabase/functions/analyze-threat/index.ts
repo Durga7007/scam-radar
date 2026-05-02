@@ -5,6 +5,86 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// ============================
+// Curated official helplines lookup
+// ============================
+// Each entry: normalized digits-only key -> metadata.
+// Keep this list conservative — only include numbers that are publicly published
+// by the organisation on its official domain / government gazette.
+type Helpline = {
+  name: string;
+  org: string;
+  country: string;
+  category: "emergency" | "cybercrime" | "government" | "bank" | "telecom" | "health" | "child_safety" | "women_safety";
+};
+
+const OFFICIAL_HELPLINES: Record<string, Helpline> = {
+  // ---------- India ----------
+  "112":   { name: "All-in-one emergency", org: "Government of India", country: "IN", category: "emergency" },
+  "100":   { name: "Police", org: "Government of India", country: "IN", category: "emergency" },
+  "101":   { name: "Fire", org: "Government of India", country: "IN", category: "emergency" },
+  "102":   { name: "Ambulance", org: "Government of India", country: "IN", category: "emergency" },
+  "108":   { name: "Emergency response", org: "Government of India", country: "IN", category: "emergency" },
+  "1091":  { name: "Women helpline", org: "Government of India", country: "IN", category: "women_safety" },
+  "1098":  { name: "Childline", org: "Ministry of Women & Child Development", country: "IN", category: "child_safety" },
+  "1930":  { name: "Cyber-crime helpline", org: "I4C, MHA India", country: "IN", category: "cybercrime" },
+  "14440": { name: "RBI awareness (DAKSH)", org: "Reserve Bank of India", country: "IN", category: "government" },
+  "155260":{ name: "Cyber-financial fraud (legacy)", org: "MHA India", country: "IN", category: "cybercrime" },
+  "18001801551": { name: "Kisan Call Centre", org: "Govt of India", country: "IN", category: "government" },
+  "18004253800": { name: "SBI customer care", org: "State Bank of India", country: "IN", category: "bank" },
+  "18001234":   { name: "SBI customer care", org: "State Bank of India", country: "IN", category: "bank" },
+  "18002586161":{ name: "HDFC Bank", org: "HDFC Bank", country: "IN", category: "bank" },
+  "18601201212":{ name: "ICICI Bank", org: "ICICI Bank", country: "IN", category: "bank" },
+  "18604195555":{ name: "Axis Bank", org: "Axis Bank", country: "IN", category: "bank" },
+  "1800111139": { name: "TRAI DND", org: "TRAI", country: "IN", category: "telecom" },
+  "1947":  { name: "Aadhaar / UIDAI helpline", org: "UIDAI", country: "IN", category: "government" },
+
+  // ---------- United States ----------
+  "911":   { name: "Emergency", org: "US emergency services", country: "US", category: "emergency" },
+  "988":   { name: "Suicide & Crisis Lifeline", org: "SAMHSA", country: "US", category: "health" },
+  "211":   { name: "Community services", org: "United Way", country: "US", category: "government" },
+  "311":   { name: "Non-emergency municipal", org: "US municipalities", country: "US", category: "government" },
+  "18008291040": { name: "IRS individual taxpayer line", org: "IRS", country: "US", category: "government" },
+  "18007726270": { name: "Social Security Admin", org: "SSA", country: "US", category: "government" },
+
+  // ---------- United Kingdom ----------
+  "999":   { name: "Emergency", org: "UK emergency services", country: "GB", category: "emergency" },
+  "112_gb":{ name: "Emergency (EU)", org: "UK emergency services", country: "GB", category: "emergency" }, // dedup with IN 112
+  "101_gb":{ name: "Police non-emergency", org: "UK Police", country: "GB", category: "emergency" },
+  "111_gb":{ name: "NHS non-emergency", org: "NHS", country: "GB", category: "health" },
+  "105":   { name: "Power-cut helpline", org: "ENA", country: "GB", category: "government" },
+  "159":   { name: "Stop Scams safe-call", org: "Stop Scams UK / banks", country: "GB", category: "bank" },
+
+  // ---------- EU general ----------
+  "116111":{ name: "Child helpline (EU)", org: "Child Helpline International", country: "EU", category: "child_safety" },
+  "116000":{ name: "Missing children (EU)", org: "Missing Children Europe", country: "EU", category: "child_safety" },
+
+  // ---------- Australia ----------
+  "000":   { name: "Emergency", org: "Australian emergency services", country: "AU", category: "emergency" },
+  "131444":{ name: "Police assistance line", org: "AU Police", country: "AU", category: "emergency" },
+
+  // ---------- Canada ----------
+  "18882228477": { name: "Anti-Fraud Centre", org: "Canadian Anti-Fraud Centre", country: "CA", category: "cybercrime" },
+};
+
+function normalizePhone(raw: string): string {
+  return (raw || "").replace(/[^\d]/g, "");
+}
+
+function lookupHelpline(raw: string): Helpline | null {
+  const digits = normalizePhone(raw);
+  if (!digits) return null;
+  // direct
+  if (OFFICIAL_HELPLINES[digits]) return OFFICIAL_HELPLINES[digits];
+  // strip common country codes (1, 44, 91, 61) once
+  for (const cc of ["1", "44", "91", "61"]) {
+    if (digits.startsWith(cc) && OFFICIAL_HELPLINES[digits.slice(cc.length)]) {
+      return OFFICIAL_HELPLINES[digits.slice(cc.length)];
+    }
+  }
+  return null;
+}
+
 const SYSTEM_PROMPT = `You are Scam Shield Radar, an expert phishing & scam detection AI.
 Your job is REAL prediction. Be strict — false negatives (missed scams) are MORE dangerous than false positives.
 
@@ -52,6 +132,12 @@ Tier C — "safe" (risk_score 0-19). Use when EITHER:
     no premium prefix, no placeholder pattern, no impersonation context). In this case summary must say
     "no fraud indicators detected, but caller identity cannot be verified from the number alone — verify the caller
     if they request money, OTP, or personal data".
+
+If the user prompt contains a "[CURATED HELPLINE MATCH]" block, treat the number as a verified official helpline:
+use verdict "safe" with risk_score between 0 and 10, mention the organisation by name in the summary, and add an
+indicator with category "reputation" / severity "info" stating it matches the curated official helpline registry.
+Still remind the user that scammers can spoof caller-ID, so they should call the number themselves rather than trust
+an inbound caller claiming to be from that organisation.
 
 Never claim a phone number is "verified legitimate". Safe means "no red flags found".
 
@@ -107,7 +193,22 @@ Deno.serve(async (req) => {
       phone: `Analyze this phone number for scam / fraud / robocall risk. Consider region, prefix patterns, premium-rate indicators, and known scam playbooks:\n\n${(input ?? "").slice(0, 64)}`,
       image: `Analyze the attached image for signs of phishing, scam, deepfake / morphing, forged document, fake social profile, or brand impersonation. Be specific about visual indicators you observe.`,
     };
-    const userText = promptByType[type];
+    let userText = promptByType[type];
+
+    // Deterministic curated helpline lookup for phone scans.
+    let curatedMatch: Helpline | null = null;
+    if (type === "phone") {
+      curatedMatch = lookupHelpline(input ?? "");
+      if (curatedMatch) {
+        userText += `\n\n[CURATED HELPLINE MATCH]\n` +
+          `name: ${curatedMatch.name}\n` +
+          `organisation: ${curatedMatch.org}\n` +
+          `country: ${curatedMatch.country}\n` +
+          `category: ${curatedMatch.category}\n` +
+          `Treat as verified official helpline per system rules.`;
+      }
+    }
+
     const userContent: any = type === "image"
       ? [
           { type: "text", text: userText },
@@ -208,6 +309,28 @@ Deno.serve(async (req) => {
       });
     }
     const result = JSON.parse(toolCall.function.arguments);
+
+    // Hard-guarantee: if we matched a curated helpline, force the verdict to safe
+    // even if the model drifted. This is the whole point of the curated list.
+    if (type === "phone") {
+      const match = lookupHelpline(input ?? "");
+      if (match) {
+        result.verdict = "safe";
+        result.risk_score = Math.min(typeof result.risk_score === "number" ? result.risk_score : 5, 10);
+        const note = `Matches curated official helpline registry: ${match.name} — ${match.org} (${match.country}).`;
+        if (!Array.isArray(result.indicators)) result.indicators = [];
+        result.indicators.unshift({
+          label: "Official helpline match",
+          severity: "info",
+          detail: note,
+          category: "reputation",
+        });
+        if (!result.summary || !/helpline|official/i.test(result.summary)) {
+          result.summary = `${note} No fraud indicators in the number itself — but caller-ID can be spoofed, so always dial the number yourself rather than trust inbound calls.`;
+        }
+      }
+    }
+
     return new Response(JSON.stringify(result), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
