@@ -85,6 +85,114 @@ function lookupHelpline(raw: string): Helpline | null {
   return null;
 }
 
+type PhoneJudgement = {
+  verdict: "safe" | "suspicious" | "phishing";
+  risk_score: number;
+  summary: string;
+  indicators: Array<{ label: string; severity: "info" | "low" | "medium" | "high"; detail: string; category: string }>;
+  recommendation: string;
+  category_scores: Record<string, number>;
+};
+
+function baseCategoryScores(score: number) {
+  return {
+    domain: 0,
+    content: 0,
+    urgency: 0,
+    credentials: 0,
+    impersonation: Math.max(0, Math.min(100, Math.round(score * 0.35))),
+    media_integrity: 0,
+    reputation: Math.max(0, Math.min(100, score)),
+  };
+}
+
+function makePhoneJudgement(raw: string): PhoneJudgement | null {
+  const digits = normalizePhone(raw);
+  if (!digits) return null;
+
+  const helpline = lookupHelpline(raw);
+  if (helpline) {
+    const note = `Matches curated official helpline registry: ${helpline.name} — ${helpline.org} (${helpline.country}).`;
+    return {
+      verdict: "safe",
+      risk_score: 5,
+      summary: `${note} No fraud indicators in the number itself — but caller-ID can be spoofed, so dial it yourself instead of trusting an inbound call.`,
+      indicators: [{ label: "Official helpline match", severity: "info", detail: note, category: "reputation" }],
+      recommendation: "Safe to use when you dial it yourself from the official source. Do not share OTPs, PINs, or passwords on inbound calls.",
+      category_scores: baseCategoryScores(5),
+    };
+  }
+
+  const stripped = digits.replace(/^0+/, "");
+  const repeatedDigit = /^(\d)\1+$/.test(digits);
+  const obviousSequence = /^(0123456789|1234567890|9876543210|0987654321)$/.test(digits);
+  const tooShort = digits.length < 7;
+  const tooLong = digits.length > 15;
+  const usFictional555 = /^(?:1)?[2-9]\d{2}55501\d{2}$/.test(digits);
+  const invalidNanp = /^(?:1)?[01]\d{9}$/.test(digits) || /^(?:1)?[2-9]\d{2}[01]\d{6}$/.test(digits);
+
+  if (tooShort || tooLong || repeatedDigit || obviousSequence || usFictional555 || invalidNanp || stripped.length === 0) {
+    const reason = tooShort
+      ? "too few digits for an ordinary phone number"
+      : tooLong
+        ? "too many digits for an international phone number"
+        : repeatedDigit
+          ? "all digits repeat"
+          : obviousSequence
+            ? "obvious placeholder sequence"
+            : usFictional555
+              ? "US 555-0100 to 555-0199 fictional/test range"
+              : "invalid North American numbering structure";
+    return {
+      verdict: "phishing",
+      risk_score: 88,
+      summary: `High-risk phone pattern detected: ${reason}. This looks fake or unsafe, not a normal reachable number.`,
+      indicators: [{ label: "Fake or invalid number pattern", severity: "high", detail: reason, category: "reputation" }],
+      recommendation: "Do not call back, do not share money or OTPs, and verify through the organisation's official website or app.",
+      category_scores: baseCategoryScores(88),
+    };
+  }
+
+  const premiumOrScamProne = /^(?:1)?900\d{7}$/.test(digits) || /^44(?:9|09)\d{8,10}$/.test(digits) || /^09\d{8,10}$/.test(digits);
+  if (premiumOrScamProne) {
+    return {
+      verdict: "phishing",
+      risk_score: 82,
+      summary: "High-risk premium-rate or scam-prone phone prefix detected.",
+      indicators: [{ label: "Premium-rate / scam-prone prefix", severity: "high", detail: "The number uses a prefix commonly associated with paid calls or scam campaigns.", category: "reputation" }],
+      recommendation: "Avoid calling this number. Search the organisation's official website for a verified contact number instead.",
+      category_scores: baseCategoryScores(82),
+    };
+  }
+
+  const normalizedLocal = digits.startsWith("91") && digits.length === 12 ? digits.slice(2) : digits.startsWith("1") && digits.length === 11 ? digits.slice(1) : digits;
+  const validIndiaMobile = /^(?:[6-9]\d{9})$/.test(normalizedLocal);
+  const validNanp = /^(?:[2-9]\d{2}[2-9]\d{6})$/.test(normalizedLocal);
+  const validUkMobile = /^(?:44)?7\d{9}$/.test(digits) || /^07\d{9}$/.test(digits);
+  const validInternational = digits.length >= 8 && digits.length <= 15 && !premiumOrScamProne;
+
+  if (validIndiaMobile || validNanp || validUkMobile || validInternational) {
+    const regionHint = validIndiaMobile ? "Indian mobile" : validNanp ? "North American phone" : validUkMobile ? "UK mobile" : "international phone";
+    return {
+      verdict: "safe",
+      risk_score: 12,
+      summary: `SAFE (no fraud indicators): this appears to be a structurally valid ordinary ${regionHint} number. Caller identity still cannot be verified from the number alone.`,
+      indicators: [{ label: "No fraud indicators", severity: "info", detail: `Number structure matches a normal ${regionHint} pattern and does not match placeholder, fictional, or premium-rate scam patterns.`, category: "reputation" }],
+      recommendation: "Treat it as low risk unless the caller asks for money, OTPs, passwords, remote access, or personal documents.",
+      category_scores: baseCategoryScores(12),
+    };
+  }
+
+  return {
+    verdict: "suspicious",
+    risk_score: 35,
+    summary: "The number is not clearly fake, but it does not match a known ordinary numbering pattern confidently enough to mark safe.",
+    indicators: [{ label: "Unverified number pattern", severity: "medium", detail: "No official helpline match and no confident country-specific valid pattern was found.", category: "reputation" }],
+    recommendation: "Do not share sensitive data unless you independently verify the caller through an official channel.",
+    category_scores: baseCategoryScores(35),
+  };
+}
+
 const SYSTEM_PROMPT = `You are Scam Shield Radar, an expert phishing & scam detection AI.
 Your job is REAL prediction. Be strict — false negatives (missed scams) are MORE dangerous than false positives.
 
@@ -186,6 +294,17 @@ Deno.serve(async (req) => {
     }
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
+
+    // Phone numbers are mostly deterministic: do local pattern validation first so
+    // normal valid numbers do not get over-warned by the AI model.
+    if (type === "phone") {
+      const deterministicPhoneResult = makePhoneJudgement(input ?? "");
+      if (deterministicPhoneResult) {
+        return new Response(JSON.stringify(deterministicPhoneResult), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
 
     const promptByType: Record<string, string> = {
       url: `Analyze this URL for phishing or scam risk:\n\n${(input ?? "").slice(0, 2000)}`,
