@@ -109,6 +109,8 @@ function baseCategoryScores(score: number) {
 function makePhoneJudgement(raw: string): PhoneJudgement | null {
   const digits = normalizePhone(raw);
   if (!digits) return null;
+  const trimmedRaw = (raw || "").trim();
+  const explicitNorthAmerica = /^\+?1(?:\D|$)/.test(trimmedRaw) || (digits.length === 11 && digits.startsWith("1"));
 
   const helpline = lookupHelpline(raw);
   if (helpline) {
@@ -129,9 +131,12 @@ function makePhoneJudgement(raw: string): PhoneJudgement | null {
   const tooShort = digits.length < 7;
   const tooLong = digits.length > 15;
   const usFictional555 = /^(?:1)?[2-9]\d{2}55501\d{2}$/.test(digits);
-  const invalidNanp = /^(?:1)?[01]\d{9}$/.test(digits) || /^(?:1)?[2-9]\d{2}[01]\d{6}$/.test(digits);
+  const normalizedLocal = digits.startsWith("91") && digits.length === 12 ? digits.slice(2) : digits.startsWith("1") && digits.length === 11 ? digits.slice(1) : digits;
+  const validIndiaMobile = /^(?:[6-9]\d{9})$/.test(normalizedLocal);
+  const validNanp = /^(?:[2-9]\d{2}[2-9]\d{6})$/.test(normalizedLocal);
+  const invalidNanp = explicitNorthAmerica && (/^(?:1)?[01]\d{9}$/.test(digits) || /^(?:1)?[2-9]\d{2}[01]\d{6}$/.test(digits));
 
-  if (tooShort || tooLong || repeatedDigit || obviousSequence || usFictional555 || invalidNanp || stripped.length === 0) {
+  if (tooShort || tooLong || repeatedDigit || obviousSequence || usFictional555 || (!validIndiaMobile && invalidNanp) || stripped.length === 0) {
     const reason = tooShort
       ? "too few digits for an ordinary phone number"
       : tooLong
@@ -165,9 +170,6 @@ function makePhoneJudgement(raw: string): PhoneJudgement | null {
     };
   }
 
-  const normalizedLocal = digits.startsWith("91") && digits.length === 12 ? digits.slice(2) : digits.startsWith("1") && digits.length === 11 ? digits.slice(1) : digits;
-  const validIndiaMobile = /^(?:[6-9]\d{9})$/.test(normalizedLocal);
-  const validNanp = /^(?:[2-9]\d{2}[2-9]\d{6})$/.test(normalizedLocal);
   const validUkMobile = /^(?:44)?7\d{9}$/.test(digits) || /^07\d{9}$/.test(digits);
   const validInternational = digits.length >= 8 && digits.length <= 15 && !premiumOrScamProne;
 
