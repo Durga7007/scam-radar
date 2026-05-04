@@ -295,6 +295,17 @@ Deno.serve(async (req) => {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
+    // Phone numbers are mostly deterministic: do local pattern validation first so
+    // normal valid numbers do not get over-warned by the AI model.
+    if (type === "phone") {
+      const deterministicPhoneResult = makePhoneJudgement(input ?? "");
+      if (deterministicPhoneResult) {
+        return new Response(JSON.stringify(deterministicPhoneResult), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
+
     const promptByType: Record<string, string> = {
       url: `Analyze this URL for phishing or scam risk:\n\n${(input ?? "").slice(0, 2000)}`,
       email: `Analyze this email/message for phishing, scam, or fake-account risk:\n\n${(input ?? "").slice(0, 8000)}`,
